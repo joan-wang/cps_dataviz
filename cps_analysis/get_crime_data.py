@@ -29,7 +29,10 @@ def process_year(year):
 		if len(results) > 0:
 			df = pd.DataFrame(results)
 			print('processing offset ', offset_num, ', df shape ', df.shape)
-			del df['location']
+			try:
+				del df['location']
+			except:
+				pass
 			df.to_sql('crimes', engine, if_exists='append', index=False)
 			offset_num += 1000
 
