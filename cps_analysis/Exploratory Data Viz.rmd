@@ -1,8 +1,21 @@
+---
+title: "Exploratory Data Visualizations"
+author: "Joan Wang"
+date: "October 22, 2017"
+output: 
+  html_document: 
+  fig_caption: false
+urlcolor: blue
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+```{r error=FALSE, warning=FALSE, message=FALSE, echo=FALSE, include=FALSE}
 library(tidyverse)
 library(reshape2)
 library(viridis)
 library(ggplot2)
-
 
 # define theme
 windowsFonts(YuGothic=windowsFont("Yu Gothic"))
@@ -19,105 +32,53 @@ mytheme <- theme(panel.background = element_rect(fill = 'gray95'),
 my_palette <- c('#FECEA8', '#A1BBD0', '#D1A827', '#687672', '#3F4234')
 my_gradient <- c(low='#566573', high='#17202A')
 
-
-# read in data
 profile <- read_csv('../cps_data/Profile_1617.csv')
 
-elem_1213 <- read_csv('../cps_data/Elementary_1213.csv')
-elem_1314 <- read_csv('../cps_data/Elementary_1314.csv')
-
-combined_1516 <- read_csv('../cps_data/Combined_1516.csv')
-elem_1516 <- filter(combined_1617, Primary_Category == 'ES')
 combined_1617 <- read_csv('../cps_data/Combined_1617.csv')
-elem_1617 <- filter(combined_1617, Primary_Category == 'ES')
 combined_1617[combined_1617 == 'NO DATA AVAILBLE'] <- NA
 combined_1617[combined_1617 == 'NOT ENOUGH DATA'] <- NA
 combined_1617$School_Survey_Safety <- factor(combined_1617$School_Survey_Safety, levels = c('VERY WEAK', 'WEAK', 'NEUTRAL', 'STRONG', 'VERY STRONG'))
 combined_1617$Zip <- factor(combined_1617$Zip)
 
-mobility <- read_csv('../cps_data/Mobility 01-16.csv')
-attendance <- read_csv('../cps_data/Attendance_03-17.csv') %>%
-  filter(Group == "All (Excludes Pre-K)") %>%
-  select(-Grade)
-
 schools_crimes <- read_csv('schools_crimes.csv')
-"""
-# Scatter: second year attendance vs reading attainment score
-attainment <- melt(select(elem_1617, Student_Attendance_Year_2_Pct, School_ID, Attainment_Reading_Pct_ES, Attainment_Math_Pct_ES), id.vars = c("School_ID", "Student_Attendance_Year_2_Pct"),
-            variable.name = "attainment_variable", 
-            value.name = "attainment_score")
+```
 
-ggplot(data = attainment, aes(x = Student_Attendance_Year_2_Pct, y = attainment_score)) +
-  geom_point(aes(color = attainment_variable)) +
-  geom_smooth(model = lm) + 
-  xlim(85, 100) + 
-  scale_color_discrete(name="Subject",
-                        labels=c("Reading", "Math")) + 
-  labs(title = "Elementary schools with higher attendance rates see higher attainment scores",
-     subtitle = "CPS attendance rates and attainment scores in 2016",
-     x = "Attendance Rate",
-     y = "Attainment Score (Percentile of National Average)",
-     caption = "Source: Chicago Public Schools - School Progress Reports SY1617") + 
-  mytheme
-
-# Line: attendance over time
-
-avg_attendance <- melt(attendance, id.vars = c("School ID", "School Name",	"Network", "Group"),
-                    variable.name = "year", 
-                    value.name = "attendance_rate") %>%
-  rename("School_ID" = "School ID") %>%
-  inner_join(profile, by="School_ID") %>%
-  group_by(year, Zip) %>%
-  summarise(attendance_rate = mean(attendance_rate, na.rm = TRUE))
-
-avg_attendance$Zip <- factor(avg_attendance$Zip)
-
-ggplot(data = avg_attendance, aes(x = year, y = attendance_rate, color = factor(Zip))) + 
-  geom_line(aes(group = Zip))
-
-
-# Line: mobility over time
-profile$School_ID <- as.character(profile$School_ID)
-avg_mobility <- melt(mobility, id.vars = c("School ID", "School Name"),
-                       variable.name = "year", 
-                       value.name = "mobility_rate") %>%
-  rename("School_ID" = "School ID") %>%
-  inner_join(profile, by="School_ID") %>%
-  group_by(year, Zip) %>%
-  summarise(mobility_rate = mean(mobility_rate, na.rm = TRUE))
-
-ggplot(data = avg_mobility, aes(x = year, y = mobility_rate, color = factor(Zip))) + 
-  geom_line(aes(group = Zip))
-"""
-
-# Density plots: attendance rate by safety rating
-ggplot(subset(filter(combined_1617, Primary_Category == "ES"), !is.na(School_Survey_Safety)), aes(x=Student_Attendance_Year_2_Pct, color = School_Survey_Safety, fill=School_Survey_Safety)) +
+### Density Plots: Distribution of Attendance Rates by Safety Rating
+```{r error=FALSE, warning=FALSE, message=FALSE}
+ggplot(subset(combined_1617, !is.na(School_Survey_Safety)), aes(x=Student_Attendance_Year_2_Pct, color = School_Survey_Safety, fill=School_Survey_Safety)) +
   geom_density() + 
   scale_fill_manual(values=my_palette, guide = FALSE) + 
   scale_color_manual(values=my_palette, guide = FALSE) + 
   facet_wrap(~ School_Survey_Safety, ncol=1) + 
   labs(title = "Attendance tends to be higher at schools where students feel safe",
-       subtitle = "Distribution of elementary school attendance rates by safety ratings*",
+       subtitle = "Distribution of elementary school attendance rates by safety rating*",
        x = "Student Attendance",
        y = "Density",
        caption = "Source: Chicago Public Schools - School Progress Reports SY1617\n *Safety ratings based on student survey") +
   mytheme
+```
 
-# Density plots: attainment by safety rating
+Not every student feels safe at school. The 5 Essentials Survey administered annually to CPS students measures student' perception of safety, rating each school on a scale of "very weak" to "very strong." Results from the 2016-2017 school year suggest that schools with weaker safety ratings also face lower student attendance. 
+
+### Density Plots: Distribution of Attainment Percentiles by Safety Rating
+```{r error=FALSE, warning=FALSE, message=FALSE}
 ggplot(subset(filter(combined_1617, Primary_Category == "ES"), !is.na(School_Survey_Safety)), aes(x=Attainment_Reading_Pct_ES, color = School_Survey_Safety, fill=School_Survey_Safety)) +
   geom_density() + 
   scale_fill_manual(values=my_palette, guide = FALSE) + 
   scale_color_manual(values=my_palette, guide = FALSE) + 
   facet_wrap(~ School_Survey_Safety, ncol=1) + 
   labs(title = "Attainment tends to be higher at schools where students feel safe",
-       subtitle = "Distribution of elementary school reading attainment percentiles by safety ratings*",
+       subtitle = "Distribution of elementary school reading attainment percentiles by safety rating*",
        x = "Student Reading Attainment (Percentile of National Average)",
        y = "Density",
        caption = "Source: Chicago Public Schools - School Progress Reports SY1617\n *Safety ratings based on student survey") +
   mytheme
+```
 
+Students' sense of school safety not only affects their attendance, but also their performance. Elementary schools with weak safety survey ratings performed worse on standardized reading tests than those with strong safety ratings. Whether directly or indirectly, unsafe school environments could be a contributing factor to negative student outcomes. 
 
-# Box & whisker: number of crimes by safety rating
+### Boxplot: Crimes in Vicinity by Safety Rating
+```{r error=FALSE, warning=FALSE, message=FALSE}
 combined_1617_crimes <- inner_join(combined_1617, schools_crimes, by="School_ID")
 ggplot(subset(combined_1617_crimes, !is.na(School_Survey_Safety)), aes(x=School_Survey_Safety, y=num_crimes_16, fill=School_Survey_Safety)) +
   scale_fill_manual(values=my_palette) + 
@@ -127,11 +88,14 @@ ggplot(subset(combined_1617_crimes, !is.na(School_Survey_Safety)), aes(x=School_
        subtitle = "Schools with weaker safety ratings face higher number of crimes \nwithin 1 mile radius of campus",
        x = "Safety Rating*",
        y = "Number of Crimes in School Vicinity",
-       caption = "Source: Chicago Public Schools - School Progress Reports SY1617\n Chicago Police Department - Crimes 2016
-        \n *Safety ratings based on student survey") + 
+       caption = "Source: Chicago Public Schools - School Progress Reports SY1617\n Chicago Police Department - Crimes 2016\n *Safety ratings based on student survey") + 
   mytheme
+```
 
-# Scatter: Percent Low Income Students vs. Crimes in Vicinity
+Many instances of crime happen close to school grounds. On average, ~4000 crimes were reported within a 1 mile radius of each CPS school in 2016. Schools with weaker safety ratings had more crime incidents reported within their vicinity. These nearby crimes rates could influence students' perception of safety at their schools.
+
+### Scatter: Percent Low Income Students vs. Crimes in Vicinity
+```{r error=FALSE, warning=FALSE, message=FALSE}
 profile <- mutate(profile, perc_lowincome = Student_Count_Low_Income / Student_Count_Total)
 subset(combined_1617_crimes, !is.na(School_Survey_Safety)) %>%
   merge(profile, by="School_ID") %>%
@@ -139,16 +103,19 @@ subset(combined_1617_crimes, !is.na(School_Survey_Safety)) %>%
     geom_point(aes(color = School_Survey_Safety)) +
     geom_smooth(model = lm) + 
     scale_x_continuous(labels = scales::percent) + 
-    scale_color_manual(name="Safety Rating*", values = my_palette) + 
+    scale_color_manual(name="Safety Rating\n(based on student survey)", values = my_palette) + 
     labs(title = "Low income students attend schools in highest-crime neighborhoods ",
-         subtitle = "Schools with higher percent of low income students see higher number of \ncrimes wtihin 1 mile radius",
+         subtitle = "Schools with higher percent of low income students see higher number of crimes wtihin 1 mile radius",
          x = "Percent Low Income Students",
          y = "Number of Crimes in School Vicinity",
-         caption = "Source: Chicago Public Schools - School Progress Reports SY1617\n Chicago Police Department - Crimes 2016
-          \n *Safety ratings based on student survey") + 
+         caption = "Source: Chicago Public Schools - School Progress Reports SY1617\n Chicago Police Department - Crimes 2016") + 
     mytheme
+```
 
-# Heat map: safety rating by zip code
+Low-income students are attending the schools with the highest rates of nearby crime. The steep slope at the rightmost side of curve fitted to the above scatterplot suggests that the schools surrounded by the most crime also have the highest proportion of low-income students. 
+
+### Heat Map: Perception of School Safety by Zip Code
+```{r error=FALSE, warning=FALSE, message=FALSE,fig.width=8,fig.height=11}
 combined_1617 %>%
   subset(!is.na(School_Survey_Safety)) %>%
   group_by(Zip, School_Survey_Safety) %>%
@@ -157,8 +124,14 @@ combined_1617 %>%
   ggplot(aes(x=School_Survey_Safety, y=Zip, fill=prop_schools)) + 
   geom_tile() + 
   scale_fill_gradient(name = 'Proportion of Schools\n in Zip Code\n', low='#AEB6BF', high='#17202A') + 
-  labs(title = "Students' perception of school safety varies between zip codes in Chicago",
+  labs(title = "Students' perception of school safety varies between zip codes",
        x = "Safety Rating*",
        y = "Zip Code",
        caption = "Source: Chicago Public Schools - School Progress Reports SY1617\n *Safety ratings based on student survey") + 
   mytheme
+```
+
+Who are these students who are most affected by these unsafe school environments? This preliminary heat map suggests that school safety perceptions vary by zip code. In future visualizations, we will continue to explore this topic from a geographical context. 
+
+
+
